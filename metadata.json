@@ -1,0 +1,7 @@
+{
+  "name": "DevDuo",
+  "description": "DevDuo builds modern, responsive websites for businesses, creators, professionals, and startups.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
