@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Send, Instagram, ArrowRight, Copy, Check, Info } from 'lucide-react';
+import { Send, Instagram, ArrowRight, Copy, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { useForm, ValidationError } from '@formspree/react';
 
 interface ContactProps {
   initialProjectType?: string;
@@ -8,8 +9,7 @@ interface ContactProps {
   initialNotes?: string;
 }
 
-// Easy hook for future form handler (Formspree, Formkeep, custom API route, etc.)
-const FORM_ENDPOINT = '';
+const FORMSPREE_FORM_ID = 'xeaqbgqk';
 
 const PROJECT_TYPES = [
   'Business Website',
@@ -28,7 +28,7 @@ const BUDGET_RANGES = [
 ];
 
 const normalizeProjectType = (val?: string) => {
-  if (!val) return 'Business Website';
+  if (!val) return '';
   const lower = val.toLowerCase();
   if (lower.includes('business')) return 'Business Website';
   if (lower.includes('landing')) return 'Landing Page';
@@ -36,17 +36,17 @@ const normalizeProjectType = (val?: string) => {
   if (lower.includes('personal') || lower.includes('creator')) return 'Personal Brand';
   if (lower.includes('custom')) return 'Custom Website';
   if (lower.includes('not sure')) return 'Not Sure Yet';
-  return 'Business Website';
+  return '';
 };
 
 const normalizeBudget = (val?: string) => {
-  if (!val) return '₹5,000 – ₹10,000';
+  if (!val) return '';
   const lower = val.toLowerCase();
   if (lower.includes('starter') || lower.includes('5,000')) return '₹5,000 – ₹10,000';
   if (lower.includes('business') || lower.includes('10,000')) return '₹10,000 – ₹25,000';
   if (lower.includes('25,000') || lower.includes('custom') || lower.includes('talk')) return '₹25,000+';
   if (lower.includes('not sure')) return 'Not Sure Yet';
-  return '₹5,000 – ₹10,000';
+  return '';
 };
 
 export const Contact: React.FC<ContactProps> = ({
@@ -54,12 +54,13 @@ export const Contact: React.FC<ContactProps> = ({
   initialBudget = '',
   initialNotes = '',
 }) => {
+  const [state, handleSubmit, reset] = useForm(FORMSPREE_FORM_ID);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [projectType, setProjectType] = useState(normalizeProjectType(initialProjectType));
   const [budget, setBudget] = useState(normalizeBudget(initialBudget));
   const [message, setMessage] = useState(initialNotes || '');
-  const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -68,27 +69,38 @@ export const Contact: React.FC<ContactProps> = ({
     if (initialNotes) setMessage(initialNotes);
   }, [initialProjectType, initialBudget, initialNotes]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (FORM_ENDPOINT) {
-      // Future backend submission:
-      // fetch(FORM_ENDPOINT, { method: 'POST', body: JSON.stringify({ name, email, projectType, budget, message }) })
-      return;
+  // Reset form and clear local summary once successfully submitted
+  useEffect(() => {
+    if (state.succeeded) {
+      setName('');
+      setEmail('');
+      setProjectType('');
+      setBudget('');
+      setMessage('');
     }
+  }, [state.succeeded]);
 
-    // Honest temporary state: no backend email gateway connected yet
-    setSubmitted(true);
+  const handleResetForm = () => {
+    reset();
+    setName('');
+    setEmail('');
+    setProjectType('');
+    setBudget('');
+    setMessage('');
   };
+
+  const hasAnyContent = Boolean(
+    name.trim() || email.trim() || projectType || budget || message.trim()
+  );
 
   const getSummaryText = () => {
     const lines = [
       `Hi DevDuo!`,
-      name ? `• Name: ${name}` : null,
-      email ? `• Contact: ${email}` : null,
-      `• Project Type: ${projectType}`,
-      `• Budget: ${budget}`,
-      message ? `• Notes: ${message}` : `• Notes: Looking to discuss a new website.`,
+      name.trim() ? `• Name: ${name.trim()}` : null,
+      email.trim() ? `• Contact: ${email.trim()}` : null,
+      projectType ? `• Project Type: ${projectType}` : null,
+      budget ? `• Budget: ${budget}` : null,
+      message.trim() ? `• Notes: ${message.trim()}` : null,
     ].filter(Boolean);
     return lines.join('\n');
   };
@@ -181,187 +193,290 @@ export const Contact: React.FC<ContactProps> = ({
           {/* Right Column: Inquiry Form */}
           <div className="lg:col-span-7">
             <div className="rounded-2xl p-7 sm:p-9 bg-[#F7F9FC] border border-slate-200/90 shadow-xs">
-              {submitted ? (
-                /* Honest temporary state */
+              {state.succeeded ? (
+                /* Success state */
                 <motion.div
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="py-6 text-center space-y-5"
+                  className="py-8 text-center space-y-5"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-[#1677FF] flex items-center justify-center mx-auto">
-                    <Info className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
+                    <Check className="w-6 h-6" />
                   </div>
 
                   <div>
                     <h3 className="font-heading text-2xl font-bold text-[#0B1220]">
-                      Form Integration Connecting Soon
+                      Enquiry Received
                     </h3>
-                    <p className="text-xs sm:text-sm text-[#526078] mt-2 max-w-md mx-auto leading-relaxed">
-                      We haven't connected an automated email backend to this form yet. To make sure your inquiry reaches us immediately, message us directly on Instagram or copy your project summary below.
+                    <p className="text-sm text-[#526078] mt-2 max-w-md mx-auto leading-relaxed">
+                      Thanks — your enquiry has been sent. We'll get back to you soon.
                     </p>
                   </div>
 
-                  {/* Summary Box */}
-                  <div className="p-4 rounded-xl bg-white border border-slate-200 text-left text-xs font-mono text-slate-700 max-w-md mx-auto shadow-2xs">
-                    <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 font-sans">
-                      Your Project Inquiry:
-                    </div>
-                    <div className="whitespace-pre-wrap">{getSummaryText()}</div>
-                  </div>
-
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={copySummary}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      {copied ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                      <span>{copied ? 'Summary Copied!' : 'Copy Summary'}</span>
-                    </button>
-
                     <a
                       href="https://instagram.com/devd_uo"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#1677FF] hover:bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                     >
+                      <Instagram className="w-3.5 h-3.5" />
                       <span>Message us on Instagram →</span>
                     </a>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setSubmitted(false)}
-                    className="text-xs text-slate-500 hover:text-slate-800 underline block mx-auto pt-2 cursor-pointer"
-                  >
-                    Edit your details
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleResetForm}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                    >
+                      Submit another enquiry
+                    </button>
+                  </div>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Name & Email */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  {/* Header above form */}
+                  <div className="mb-6">
+                    <div className="text-[11px] font-bold text-blue-600 tracking-wider uppercase mb-1">
+                      START YOUR PROJECT
+                    </div>
+                    <p className="text-xs sm:text-sm text-[#526078]">
+                      Tell us what you want to build and we'll take it from there.
+                    </p>
+                  </div>
+
+                  {/* Submission Error Banner */}
+                  {state.errors && (
+                    <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-semibold text-rose-900">Submission failed</div>
+                        <p className="mt-0.5 text-rose-700">
+                          We couldn't send your enquiry right now. Please try again or message us on Instagram{' '}
+                          <a
+                            href="https://instagram.com/devd_uo"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold underline hover:text-rose-900"
+                          >
+                            @devd_uo
+                          </a>.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Hidden inputs to guarantee projectType and budget are captured by FormData */}
+                    <input type="hidden" name="projectType" value={projectType} />
+                    <input type="hidden" name="budget" value={budget} />
+
+                    {/* Name & Email */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label
+                          htmlFor="contact-name"
+                          className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+                        >
+                          Your Name *
+                        </label>
+                        <input
+                          id="contact-name"
+                          name="name"
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Your name"
+                          className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                        />
+                        <ValidationError
+                          prefix="Name"
+                          field="name"
+                          errors={state.errors}
+                          className="text-xs text-rose-600 mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="contact-email"
+                          className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+                        >
+                          Email *
+                        </label>
+                        <input
+                          id="contact-email"
+                          name="email"
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                        />
+                        <ValidationError
+                          prefix="Email"
+                          field="email"
+                          errors={state.errors}
+                          className="text-xs text-rose-600 mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Project Types */}
                     <div>
-                      <label
-                        htmlFor="contact-name"
-                        className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
-                      >
-                        Your Name *
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
+                        Project Type
                       </label>
-                      <input
-                        id="contact-name"
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Maya Sharma"
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                      <div className="flex flex-wrap gap-2">
+                        {PROJECT_TYPES.map((type) => {
+                          const isSelected = projectType === type;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setProjectType(isSelected ? '' : type)}
+                              className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#1677FF] text-white shadow-xs font-semibold'
+                                  : 'bg-white text-slate-700 border border-slate-200/90 hover:border-slate-300'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <ValidationError
+                        prefix="Project Type"
+                        field="projectType"
+                        errors={state.errors}
+                        className="text-xs text-rose-600 mt-1"
                       />
                     </div>
 
+                    {/* Budget Ranges */}
                     <div>
-                      <label
-                        htmlFor="contact-email"
-                        className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
-                      >
-                        Email or Instagram Handle *
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
+                        Estimated Budget
                       </label>
-                      <input
-                        id="contact-email"
-                        type="text"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="maya@example.com or @handle"
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                      <div className="flex flex-wrap gap-2">
+                        {BUDGET_RANGES.map((range) => {
+                          const isSelected = budget === range;
+                          return (
+                            <button
+                              key={range}
+                              type="button"
+                              onClick={() => setBudget(isSelected ? '' : range)}
+                              className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#1677FF] text-white shadow-xs font-semibold'
+                                  : 'bg-white text-slate-700 border border-slate-200/90 hover:border-slate-300'
+                              }`}
+                            >
+                              {range}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <ValidationError
+                        prefix="Budget"
+                        field="budget"
+                        errors={state.errors}
+                        className="text-xs text-rose-600 mt-1"
                       />
                     </div>
-                  </div>
 
-                  {/* Project Types */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
-                      Project Type
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {PROJECT_TYPES.map((type) => {
-                        const isSelected = projectType === type;
-                        return (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => setProjectType(type)}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-[#1677FF] text-white shadow-xs font-semibold'
-                                : 'bg-white text-slate-700 border border-slate-200/90 hover:border-slate-300'
-                            }`}
-                          >
-                            {type}
-                          </button>
-                        );
-                      })}
+                    {/* Message */}
+                    <div>
+                      <label
+                        htmlFor="contact-message"
+                        className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+                      >
+                        Project Details
+                      </label>
+                      <textarea
+                        id="contact-message"
+                        name="message"
+                        rows={4}
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="What is your business? Do you have an existing website or starting fresh? Any specific goals or timeframe?"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none shadow-2xs"
+                      />
+                      <ValidationError
+                        prefix="Message"
+                        field="message"
+                        errors={state.errors}
+                        className="text-xs text-rose-600 mt-1"
+                      />
                     </div>
-                  </div>
 
-                  {/* Budget Ranges */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
-                      Estimated Budget
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {BUDGET_RANGES.map((range) => {
-                        const isSelected = budget === range;
-                        return (
+                    {/* Live Enquiry Summary & Copy Button */}
+                    <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs font-mono text-slate-700 shadow-2xs space-y-2">
+                      <div className="flex items-center justify-between font-sans">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                          Your Enquiry Summary
+                        </span>
+                        {hasAnyContent && (
                           <button
-                            key={range}
                             type="button"
-                            onClick={() => setBudget(range)}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-[#1677FF] text-white shadow-xs font-semibold'
-                                : 'bg-white text-slate-700 border border-slate-200/90 hover:border-slate-300'
-                            }`}
+                            onClick={copySummary}
+                            className="text-[11px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 cursor-pointer"
                           >
-                            {range}
+                            {copied ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="text-emerald-600">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Summary</span>
+                              </>
+                            )}
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
+                      <div className="whitespace-pre-wrap font-mono text-[11px] text-slate-700">
+                        {hasAnyContent ? (
+                          <div className="space-y-1">
+                            {name.trim() && <div>• Name: {name.trim()}</div>}
+                            {email.trim() && <div>• Contact: {email.trim()}</div>}
+                            {projectType && <div>• Project Type: {projectType}</div>}
+                            {budget && <div>• Budget: {budget}</div>}
+                            {message.trim() && <div>• Notes: {message.trim()}</div>}
+                          </div>
+                        ) : (
+                          <div className="text-slate-400 text-xs italic font-sans">
+                            Form details will appear here as you type.
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Message */}
-                  <div>
-                    <label
-                      htmlFor="contact-message"
-                      className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+                    {/* Submit CTA */}
+                    <button
+                      id="contact-submit-btn"
+                      type="submit"
+                      disabled={state.submitting}
+                      className="w-full py-3.5 px-6 rounded-xl font-semibold text-sm bg-[#1677FF] hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white shadow-sm transition-all duration-200 flex items-center justify-center gap-2 group cursor-pointer"
                     >
-                      Project Details
-                    </label>
-                    <textarea
-                      id="contact-message"
-                      rows={4}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="What is your business? Do you have an existing website or starting fresh? Any specific goals or timeframe?"
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none shadow-2xs"
-                    />
-                  </div>
-
-                  {/* Submit CTA */}
-                  <button
-                    id="contact-submit-btn"
-                    type="submit"
-                    className="w-full py-3.5 px-6 rounded-xl font-semibold text-sm bg-[#1677FF] hover:bg-blue-600 text-white shadow-sm transition-all duration-200 flex items-center justify-center gap-2 group cursor-pointer"
-                  >
-                    <span>Submit Inquiry</span>
-                    <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </form>
+                      {state.submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Submit Inquiry</span>
+                          <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
               )}
             </div>
           </div>
