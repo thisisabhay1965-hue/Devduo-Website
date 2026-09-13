@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUp, Instagram } from 'lucide-react';
+import { ArrowUp, Instagram, Mail } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const scrollToTop = () => {
@@ -70,8 +70,17 @@ export const Footer: React.FC = () => {
             </a>
           </nav>
 
-          {/* Social Links & Back to top */}
-          <div className="flex items-center gap-4">
+          {/* Social & Contact Links & Back to top */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <a
+              href="mailto:devduowebsites@gmail.com"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-blue-500/50 hover:text-white transition-all text-slate-300 text-xs font-medium"
+              aria-label="Email DevDuo at devduowebsites@gmail.com"
+            >
+              <Mail className="w-4 h-4 text-blue-400" />
+              <span>devduowebsites@gmail.com</span>
+            </a>
+
             <a
               href="https://instagram.com/devd_uo"
               target="_blank"
